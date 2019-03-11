@@ -1,5 +1,6 @@
-const COLORS = [ 'crimson', 'forestgreen', 'yellow', 'royalblue',
-                 'saddlebrown', 'hotpink', 'darkorange', 'darkmagenta' ];
+const COLORS = [ 'crimson', 'forestgreen', 'yellow',
+   'royalblue', 'saddlebrown', 'hotpink', 'darkorange',
+   'darkmagenta' ];
 const N_DISKS = COLORS.length;
 const BASE_LENGTH = 200;
 const C_WIDTH  = 3.732 * BASE_LENGTH;
@@ -32,7 +33,8 @@ class Disk {
   constructor(level) {
     this.level = level;
     this.color = COLORS[level];
-    this.r = (DISK_R-POLE_R)*(N_DISKS-level)/N_DISKS + POLE_R;
+    this.r = (DISK_R-POLE_R)*(N_DISKS-level)
+                / N_DISKS + POLE_R;
   }
 
   draw(pos) {
@@ -71,7 +73,8 @@ class Tower {
   constructor(name, disks, direction=null) {
     this.name = name;
     this.disks = [];
-    for (var i = 0; i < disks; i++) { this.disks.push(new Disk(i)); }
+    for (var i = 0; i < disks; i++) 
+      { this.disks.push(new Disk(i)); }
     this.direction = direction;
     var rx, ry;
     [rx,ry] = POSITIONS[name];
@@ -95,13 +98,19 @@ class Tower {
       ? 'gold' : 'white');
     ellipse(pos.x, pos.y, 2*POLE_R);
 
-    // draw a direction
+    // draw direction
     stroke('navy');
     [sx, sy] = [pos.x,  pos.y ];
     [dx, dy] = [pos2.x, pos2.y];
     r = POLE_R / Math.sqrt((dx-sx)*(dx-sx)+(dy-sy)*(dy-sy));
     [dx, dy] = [(dx-sx)*r+sx, (dy-sy)*r+sy];
     line(sx, sy, dx, dy);
+  }
+
+  flash_pole() {
+    this.exchanging = (this.direction.direction === this);
+    this.flash_ctr++;
+    this.flash_ctr %= FLASH_CTR;
   }
 
   get toplevel() {
@@ -114,29 +123,20 @@ class Tower {
 var src = new Tower('Source', N_DISKS);
 var aux = new Tower('Auxiliary',   0, src);
 var dst = new Tower('Destination', 0, src);
-// In the case of N_DISKS is odd, the src must face the src.
-// Otherwise, the src faces the aux.
-src.direction = (COLORS.length % 2 == 1) ? dst : aux;
+// The src faces the dst if the number of disks (N_DISKS) is odd.
+// Otherwise, it faces the aux.
+src.direction = (N_DISKS % 2 == 1) ? dst : aux;
 
-// the reference to the moving disk is stored to this variable.
+// The variable for the reference to the moving disk
 var moving_disk = null;
 
-function draw_stacking_disks() {
-  background('beige');
-  [src, aux, dst].forEach(function(t) { t.draw(); })
-}
-
-function flash_poles() {
-  [src, aux, dst].forEach(function(t) {
-    t.exchanging = (t.direction.direction === t);
-    t.flash_ctr += 1;
-    t.flash_ctr %= FLASH_CTR;
-  })
-}
-
-function pop_disk(src, aux, dst) {
+function pop_disk() {
   var towers = [src, aux, dst].filter(t => t.exchanging);
   var idx, from, to;
+  if (towers[0].toplevel == towers[1].toplevel) { 
+    noLoop(); 
+    return null; 
+  };
   idx = (towers[0].toplevel > towers[1].toplevel) ? 0 : 1;
   [from, to] = [towers[idx], towers[1-idx]];
   return new MovingDisk(from.disks.pop().level, from, to);
@@ -163,17 +163,16 @@ function setup() {
 }
 
 function draw() {
-  // draw three towers and disks stacking on the towers
-  draw_stacking_disks();
+  background('beige');
+  [src, aux, dst].forEach(function(t) { 
+    t.draw(); 
+    t.flash_pole();
+  })
 
-  // find two exchange-towers out of three
-  flash_poles();
-
-  // start exchanging
   if (moving_disk == null) {
-    moving_disk = pop_disk(src, aux, dst);
+    moving_disk = pop_disk();
   } else if (draw_moving_disk()) {
     turn();
     moving_disk = null;
-  } // else { do nothing }
+  }
 }
